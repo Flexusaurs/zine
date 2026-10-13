@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/zine-social/zine/internal/api"
-	"github.com/zine-social/zine/internal/middleware/ratelimit"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
