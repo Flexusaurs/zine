@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: zine
+      POSTGRES_PASSWORD: zine
+      POSTGRES_DB: zine_dev
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zine -d zine_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  typesense:
+    image: typesense/typesense:0.25.2
+    ports:
+      - "8108:8108"
+    environment:
+      TYPESENSE_API_KEY: zine
+      TYPESENSE_DATA_DIR: /data/typesense
+    volumes:
+      - typesense_data:/data/typesense
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8108/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_URL=postgres://zine:zine@postgres:5432/zine_dev?sslmode=disable
+      - REDIS_URL=redis://redis:6379
+      - TYPESENSE_HOST=typesense
+      - TYPESENSE_PORT=8108
+      - TYPESENSE_API_KEY=zine
+      - JWT_SECRET=dev-only-jwt-secret
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      typesense:
+        condition: service_healthy
+    volumes:
+      - ../:/app
+      - /app/pkg/mod
+
+volumes:
+  postgres_data:
+  redis_data:
+  typesense_data:

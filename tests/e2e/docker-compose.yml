@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  test-runner:
+    build:
+      context: ../
+      dockerfile: Dockerfile.test
+    environment:
+      - DATABASE_URL=postgres://zine:zine@postgres:5432/zine_test?sslmode=disable
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../:/app
+      - /app/pkg/mod
+
+  postgres:
+    image: postgres:16
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: zine
+      POSTGRES_PASSWORD: zine
+      POSTGRES_DB: zine_test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zine -d zine_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  redis_data:
